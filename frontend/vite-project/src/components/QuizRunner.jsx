@@ -1,237 +1,222 @@
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
 import './QuizRunner.css';
 
 const QuizRunner = ({ questions, onComplete }) => {
-  const [currentQuestion, setCurrentQuestion] = useState(() => {
-    const saved = localStorage.getItem('quizCurrentQuestion');
-    return saved ? parseInt(saved) : 0;
+  const teamId = localStorage.getItem('teamId');
+  const timerRef = useRef(null);
+  const [currentIndex, setCurrentIndex] = useState(() => {
+    const saved = localStorage.getItem('quiz_current_index');
+    return saved ? parseInt(saved, 10) : 0;
   });
-  const [selectedAnswer, setSelectedAnswer] = useState(null);
-  const [timeLeft, setTimeLeft] = useState(() => {
-    const saved = localStorage.getItem('quizTimeLeft');
-    return saved ? parseInt(saved) : 120;
-  });
-  const [answers, setAnswers] = useState(() => {
-    const saved = localStorage.getItem('quizAnswers');
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [isAnswered, setIsAnswered] = useState(false);
-
-  // Save quiz progress to localStorage
-  useEffect(() => {
-    localStorage.setItem('quizCurrentQuestion', currentQuestion.toString());
-  }, [currentQuestion]);
+  const [input, setInput] = useState('');
+  const [feedback, setFeedback] = useState(null); // null | 'correct' | 'incorrect'
+  const [answers, setAnswers] = useState([]);
+  const answersRef = useRef([]);
+  const [earnedAmount, setEarnedAmount] = useState(0);
+  const [totalBalance, setTotalBalance] = useState(null);
+  const [teamName, setTeamName] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [awaitingNext, setAwaitingNext] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(120);
 
   useEffect(() => {
-    localStorage.setItem('quizTimeLeft', timeLeft.toString());
-  }, [timeLeft]);
+    // Fetch team data to display name and starting balance
+    const fetchTeam = async () => {
+      try {
+        if (!teamId) return;
+        const res = await fetch(`http://localhost:5000/api/round1/team/${teamId}`);
+        const data = await res.json();
+        if (res.ok) {
+          setTotalBalance(data.data.totalBalance || parseInt(localStorage.getItem('round1Bonus')) || 1200);
+          // team name is not included in this endpoint; we can try to fetch team via /api/teams if present
+          // fallback: use localStorage team display name if available
+          const storedName = localStorage.getItem('teamName');
+          if (storedName) setTeamName(storedName);
+        }
+      } catch (err) {
+        console.error('Failed to load team data', err);
+      }
+    };
 
+    fetchTeam();
+  }, [teamId]);
+
+  // Persist current index
   useEffect(() => {
-    if (answers.length > 0) {
-      localStorage.setItem('quizAnswers', JSON.stringify(answers));
+    localStorage.setItem('quiz_current_index', String(currentIndex));
+  }, [currentIndex]);
+
+  // Reset timer for each new question
+  useEffect(() => {
+    const q = questions && questions[currentIndex];
+    if (!q) return;
+
+    // Clear existing timer
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
     }
-  }, [answers]);
 
-  // Clear quiz data when quiz is complete
-  const clearQuizProgress = () => {
-    localStorage.removeItem('quizCurrentQuestion');
-    localStorage.removeItem('quizTimeLeft');
-    localStorage.removeItem('quizAnswers');
+    // Always start with fresh timer for each question
+    setTimeLeft(120);
+
+    // Save current time when leaving/refreshing
+    const handleBeforeUnload = () => {
+      localStorage.setItem(`timer_${q.id}`, timeLeft.toString());
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [currentIndex, questions]);
+
+
+
+  const currentQuestion = questions[currentIndex];
+
+  const submitAnswer = async (auto = false) => {
+    if (!teamId) {
+      alert('Team ID missing. Please register first.');
+      return;
+    }
+    if (submitting) return;
+    // allow auto submit with empty input
+    if (!auto && !input) return;
+    setSubmitting(true);
+
+    try {
+      const res = await fetch('http://localhost:5000/api/round1/quiz/answer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ teamId, questionId: currentQuestion.id, answer: auto ? '' : input })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        console.error('Answer submission failed', data);
+        setFeedback('incorrect');
+        setAwaitingNext(true);
+      } else {
+        const isCorrect = data.data.correct;
+        setFeedback(isCorrect ? 'correct' : 'incorrect');
+        setEarnedAmount(data.data.earnedAmount || 0);
+        setTotalBalance(data.data.totalBalance || totalBalance);
+
+        const newAnswerRecord = { questionId: currentQuestion.id, answer: auto ? '' : input, correct: isCorrect };
+        const newAnswersList = [...answersRef.current, newAnswerRecord];
+        setAnswers(newAnswersList);
+        answersRef.current = newAnswersList;
+        setAwaitingNext(true);
+      }
+    } catch (err) {
+      console.error('Submit answer error', err);
+      setFeedback('incorrect');
+    }
+
+    setSubmitting(false);
+    // Do not auto-advance. Show feedback and wait for user to click Next.
   };
 
-  useEffect(() => {
-    if (timeLeft > 0 && !isAnswered) {
-      const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
-      return () => clearTimeout(timer);
-    } else if (timeLeft === 0 && !isAnswered) {
-      handleNext(true); // Auto-submit when time runs out
-    }
-  }, [timeLeft, isAnswered]);
-
-  const handleAnswerSelect = (index) => {
-    if (!isAnswered) {
-      setSelectedAnswer(index);
-      console.log('Selected answer:', index, 'Type:', typeof index);
-      console.log('Correct answer:', questions[currentQuestion].correctAnswer, 'Type:', typeof questions[currentQuestion].correctAnswer);
-      console.log('Are they equal?', index === questions[currentQuestion].correctAnswer);
-      console.log('Full question object:', questions[currentQuestion]);
-    }
-  };
-
-  const handleNext = (autoSubmit = false) => {
-    const correctAnswerIndex = Number(questions[currentQuestion].correctAnswer);
-    const selectedAnswerIndex = Number(selectedAnswer);
-    const isCorrect = autoSubmit ? false : selectedAnswerIndex === correctAnswerIndex;
+  const handleNext = () => {
+    setFeedback(null);
+    setInput('');
+    setAwaitingNext(false);
     
-    console.log('Checking answer:', {
-      selectedAnswer: selectedAnswerIndex,
-      selectedAnswerType: typeof selectedAnswerIndex,
-      correctAnswerIndex,
-      correctAnswerType: typeof correctAnswerIndex,
-      isCorrect,
-      rawCorrectAnswer: questions[currentQuestion].correctAnswer,
-      question: questions[currentQuestion].question
-    });
-    
-    const newAnswers = [...answers, {
-      questionId: questions[currentQuestion].id,
-      selectedAnswer: autoSubmit ? null : selectedAnswerIndex,
-      correct: isCorrect,
-      timeTaken: 120 - timeLeft
-    }];
-    setAnswers(newAnswers);
-
-    if (currentQuestion < questions.length - 1) {
-      setCurrentQuestion(currentQuestion + 1);
-      setSelectedAnswer(null);
-      setTimeLeft(120);
-      setIsAnswered(false);
+    // move to next question or finish
+    if (currentIndex < questions.length - 1) {
+      setTimeLeft(120); // Reset timer for new question
+      setCurrentIndex(currentIndex + 1);
     } else {
-      // Quiz complete - clear progress from localStorage
-      clearQuizProgress();
-      
-      const correctCount = newAnswers.filter(a => a.correct).length;
-      const earnedAmount = correctCount * 100;
+      // Quiz complete
+      const completedAnswers = answersRef.current;
       onComplete({
-        answers: newAnswers,
-        correctCount,
-        earnedAmount,
+        answers: completedAnswers,
+        correctCount: completedAnswers.filter(a => a.correct).length,
+        earnedAmount: earnedAmount,
         totalQuestions: questions.length
       });
     }
   };
 
-  const handleSubmit = () => {
-    if (selectedAnswer !== null) {
-      setIsAnswered(true);
-      console.log('Answer submitted.');
-      console.log('Selected:', selectedAnswer, 'Correct:', questions[currentQuestion].correctAnswer);
-      console.log('Comparison:', selectedAnswer === questions[currentQuestion].correctAnswer);
-      console.log('Number Comparison:', Number(selectedAnswer) === Number(questions[currentQuestion].correctAnswer));
-      setTimeout(() => handleNext(), 2000); // Increased to 2 seconds to see the result
-    }
-  };
+  // Timer effect - resets on question change and handles countdown
+  useEffect(() => {
+    // Reset timer when question changes
+    setTimeLeft(120);
 
-  const progress = ((currentQuestion + 1) / questions.length) * 100;
-  const minutes = Math.floor(timeLeft / 60);
-  const seconds = timeLeft % 60;
+    // Start countdown if not showing feedback
+    if (!feedback && !submitting && !awaitingNext) {
+      timerRef.current = setInterval(() => {
+        setTimeLeft(prev => {
+          const newTime = prev - 1;
+          if (newTime <= 0) {
+            clearInterval(timerRef.current);
+            submitAnswer(true);
+            return 0;
+          }
+          return newTime;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [currentIndex, feedback, submitting, awaitingNext]);
 
   return (
     <div className="quiz-runner">
-      {/* Progress Bar */}
-      <div className="quiz-progress-bar">
-        <motion.div 
-          className="quiz-progress-fill"
-          initial={{ width: 0 }}
-          animate={{ width: `${progress}%` }}
-          transition={{ duration: 0.3 }}
-        />
-      </div>
-
-      {/* Header */}
       <div className="quiz-header">
-        <div className="quiz-info">
-          <span className="quiz-question-number">
-            Question {currentQuestion + 1} / {questions.length}
-          </span>
-          <span className="quiz-category">
-            {questions[currentQuestion].category.toUpperCase()}
-          </span>
+        <div>
+          <div className="round-badge small">ROUND 1</div>
+          <h3>Component Quest</h3>
         </div>
-        <div className={`quiz-timer ${timeLeft < 30 ? 'warning' : ''}`}>
-          <span className="timer-icon">⏱️</span>
-          <span className="timer-text">
-            {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
-          </span>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: '0.9rem' }}>{teamName || 'Your Team'}</div>
+          <div style={{ fontWeight: '700' }}>₹{totalBalance ?? (parseInt(localStorage.getItem('round1Bonus')) || 1200)}</div>
         </div>
       </div>
 
-      {/* Question Card */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={currentQuestion}
-          initial={{ opacity: 0, x: 50 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -50 }}
-          transition={{ duration: 0.3 }}
-          className="quiz-question-card"
-        >
-          <h2 className="quiz-question-text">
-            {questions[currentQuestion].question}
-          </h2>
+      <motion.div className="quiz-question-card" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+        <h2 className="quiz-question-text">{currentQuestion.question}</h2>
 
-          <div className="quiz-options">
-            {questions[currentQuestion].options.map((option, index) => {
-              const correctAnswerNum = Number(questions[currentQuestion].correctAnswer);
-              const isCorrectOption = index === correctAnswerNum;
-              const isSelectedOption = selectedAnswer === index;
-              
-              return (
-                <motion.button
-                  key={index}
-                  onClick={() => handleAnswerSelect(index)}
-                  className={`quiz-option ${
-                    isSelectedOption ? 'selected' : ''
-                  } ${
-                    isAnswered && isCorrectOption
-                      ? 'correct'
-                      : isAnswered && isSelectedOption && !isCorrectOption
-                      ? 'incorrect'
-                      : ''
-                  }`}
-                  whileHover={{ scale: isAnswered ? 1 : 1.02 }}
-                  whileTap={{ scale: isAnswered ? 1 : 0.98 }}
-                  disabled={isAnswered}
-                >
-                  <span className="option-letter">
-                    {String.fromCharCode(65 + index)}
-                  </span>
-                  <span className="option-text">{option}</span>
-                  {isAnswered && isCorrectOption && (
-                    <span className="option-icon">✓</span>
-                  )}
-                  {isAnswered && isSelectedOption && !isCorrectOption && (
-                    <span className="option-icon">✗</span>
-                  )}
-                </motion.button>
-              );
-            })}
-          </div>
+        <div style={{ marginTop: '1rem' }}>
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Type your answer here..."
+            className={`text-answer-input ${feedback === 'correct' ? 'input-correct' : ''} ${feedback === 'incorrect' ? 'input-incorrect' : ''}`}
+            disabled={!!feedback || awaitingNext || submitting}
+          />
+        </div>
 
-          <div className="quiz-actions">
-            {isAnswered && (
-              <motion.div 
-                className={`answer-feedback ${Number(selectedAnswer) === Number(questions[currentQuestion].correctAnswer) ? 'feedback-correct' : 'feedback-incorrect'}`}
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                {Number(selectedAnswer) === Number(questions[currentQuestion].correctAnswer) ? (
-                  <>
-                    <span className="feedback-icon">🎉</span>
-                    <span className="feedback-text">Correct! +₹100</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="feedback-icon">❌</span>
-                    <span className="feedback-text">Incorrect! Correct answer was {String.fromCharCode(65 + Number(questions[currentQuestion].correctAnswer))}</span>
-                  </>
-                )}
-              </motion.div>
-            )}
-            <button
-              onClick={handleSubmit}
-              disabled={selectedAnswer === null || isAnswered}
-              className="quiz-submit-btn"
-            >
-              {isAnswered ? 'Moving to next...' : 'Submit Answer'}
+        <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <button className="quiz-submit-btn" onClick={() => submitAnswer(false)} disabled={submitting || awaitingNext || (!!feedback && !awaitingNext)}>
+            Submit Answer
+          </button>
+          {feedback === 'correct' && <div className="feedback-correct">✓ Correct +₹100</div>}
+          {feedback === 'incorrect' && <div className="feedback-incorrect">✗ Incorrect</div>}
+          {awaitingNext && (
+            <button className="quiz-submit-btn" style={{ marginLeft: 8 }} onClick={handleNext}>
+              Next ➜
             </button>
-          </div>
-        </motion.div>
-      </AnimatePresence>
+          )}
+        </div>
 
-      {/* Stats Footer */}
+        <div style={{ marginTop: '1.2rem', color: '#ddd', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>Question {currentIndex + 1} / {questions.length}</div>
+          <div className={`quiz-timer ${timeLeft < 30 ? 'warning' : ''}`} style={{ padding: '0.2rem 0.6rem', borderRadius: 8, fontSize: '0.95rem' }}>
+            <span className="timer-icon">⏱️</span>
+            <span style={{ marginLeft: 6 }}>{String(Math.floor(timeLeft / 60)).padStart(2, '0')}:{String(timeLeft % 60).padStart(2, '0')}</span>
+          </div>
+        </div>
+      </motion.div>
+
       <div className="quiz-stats">
         <div className="stat">
           <span className="stat-label">Answered</span>
@@ -243,7 +228,7 @@ const QuizRunner = ({ questions, onComplete }) => {
         </div>
         <div className="stat">
           <span className="stat-label">Earned</span>
-          <span className="stat-value earned">₹{answers.filter(a => a.correct).length * 100}</span>
+          <span className="stat-value earned">₹{earnedAmount}</span>
         </div>
       </div>
     </div>

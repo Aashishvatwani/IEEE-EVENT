@@ -2,7 +2,14 @@ import mongoose from 'mongoose';
 
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGO_URI, {
+    // Support both MONGO_URI and MONGODB_URI env var names (legacy/typo compatibility)
+    const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI;
+
+    if (!mongoUri) {
+      throw new Error('MongoDB connection string not found. Set MONGO_URI or MONGODB_URI in your environment.');
+    }
+
+    const conn = await mongoose.connect(mongoUri, {
       useNewUrlParser: true,
       useUnifiedTopology: true
     });

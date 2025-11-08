@@ -95,6 +95,28 @@
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 230, 255, 0.05) inset;
 }
 
+.text-answer-input {
+  width: 100%;
+  padding: 0.9rem 1rem;
+  border-radius: 8px;
+  border: 2px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.02);
+  color: #fff;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.text-answer-input.input-correct {
+  border-color: #00ff88;
+  box-shadow: 0 6px 20px rgba(0,255,136,0.12);
+}
+
+.text-answer-input.input-incorrect {
+  border-color: var(--color-accent);
+  box-shadow: 0 6px 20px rgba(255,0,122,0.12);
+}
+
 .quiz-question-text {
   font-family: var(--font-sub);
   font-size: 1.5rem;

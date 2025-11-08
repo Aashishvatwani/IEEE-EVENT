@@ -50,6 +50,8 @@ const teamSchema = new mongoose.Schema({
     quizScore: { type: Number, default: 0 },
     earnedAmount: { type: Number, default: 0 },
     totalBalance: { type: Number, default: 0 },
+    // track which quiz questions this team has already answered (prevent duplicates)
+    answeredQuestions: [{ type: String }],
     purchasedComponents: [{
       componentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Component' },
       name: { type: String },

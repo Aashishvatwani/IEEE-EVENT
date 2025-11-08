@@ -79,12 +79,10 @@ const Round1 = () => {
           throw new Error(quizData.message || 'Failed to load quiz questions');
         }
 
-        // Transform backend data to match frontend format
-        const transformedQuestions = quizData.data.map((q, index) => ({
-          id: index + 1,
+        // Transform backend data to match frontend format (do NOT rely on correct answers)
+        const transformedQuestions = quizData.data.map((q) => ({
+          id: q._id,
           question: q.question,
-          options: q.options,
-          correctAnswer: q.correctAnswer,
           difficulty: q.difficulty,
           category: q.category
         }));
@@ -112,7 +110,7 @@ const Round1 = () => {
           type: c.type
         }));
 
-        setComponentStore(transformedComponents);
+  setComponentStore(transformedComponents);
         setLoading(false);
       } catch (err) {
         console.error('Error fetching data:', err);
@@ -159,41 +157,28 @@ const Round1 = () => {
     }
 
     try {
-      // Extract just the answer indices for backend
-      const answerIndices = results.answers.map(a => a.selectedAnswer !== null ? a.selectedAnswer : -1);
-
-      // Submit quiz to backend
-      const res = await fetch('http://localhost:5000/api/round1/quiz/submit', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          teamId,
-          answers: answerIndices
-        })
-      });
-
+      // After per-question server validations, fetch the authoritative team Round 1 data
+      const res = await fetch(`http://localhost:5000/api/round1/team/${teamId}`);
       const data = await res.json();
-      
-      if (!res.ok) {
-        throw new Error(data.message || 'Failed to submit quiz');
-      }
+      if (!res.ok) throw new Error(data.message || 'Failed to fetch team round1 data');
 
-      // Update quiz results with backend response
+      const earned = data.data.earnedAmount || 0;
+      const totalBal = data.data.totalBalance || (parseInt(localStorage.getItem('round1Bonus')) || 1200) + earned;
+      const bonusAmt = totalBal - earned;
+
       setQuizResults({
-        correctCount: data.data.correctAnswers,
-        totalQuestions: data.data.totalQuestions,
-        earnedAmount: data.data.earnedAmount,
-        bonusAmount: data.data.bonusAmount,
-        totalBalance: data.data.totalBalance
+        correctCount: results.correctCount,
+        totalQuestions: results.totalQuestions,
+        earnedAmount: earned,
+        bonusAmount: bonusAmt,
+        totalBalance: totalBal
       });
 
-      setBonusAmount(data.data.bonusAmount);
-      setTimeout(() => setPhase('store'), 2000);
+      setBonusAmount(bonusAmt);
+      setTimeout(() => setPhase('store'), 1200);
     } catch (err) {
-      console.error('Error submitting quiz:', err);
-      alert('Failed to submit quiz: ' + err.message);
+      console.error('Error finalizing quiz:', err);
+      alert('Failed to finalize quiz: ' + err.message);
     }
   };
 
