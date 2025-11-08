@@ -61,9 +61,7 @@ adminSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// Index for faster queries
-adminSchema.index({ username: 1 });
-adminSchema.index({ email: 1 });
+// No need for explicit indexes - unique: true already creates them
 
 const Admin = mongoose.model('Admin', adminSchema);
 

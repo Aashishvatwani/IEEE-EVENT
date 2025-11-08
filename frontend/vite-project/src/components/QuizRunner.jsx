@@ -81,6 +81,7 @@ const QuizRunner = ({ questions, onComplete }) => {
       timeTaken: 120 - timeLeft
     }];
     setAnswers(newAnswers);
+    localStorage.setItem('quizAnswers', JSON.stringify(newAnswers));
 
     if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
