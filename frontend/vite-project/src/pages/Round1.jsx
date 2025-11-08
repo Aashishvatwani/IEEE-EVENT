@@ -72,7 +72,7 @@ const Round1 = () => {
         setError(null);
 
         // Fetch quiz questions
-        const quizRes = await fetch('http://localhost:5000/api/round1/quiz');
+        const quizRes = await fetch(' https://nsoc-event.onrender.com/api/round1/quiz');
         const quizData = await quizRes.json();
         
         if (!quizRes.ok) {

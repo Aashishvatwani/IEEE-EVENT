@@ -105,7 +105,7 @@ const Round2 = () => {
         setLoading(true);
 
         // Fetch team data to get purchased components from Round 1
-        const teamRes = await fetch(`http://localhost:5000/api/teams/${teamId}`);
+        const teamRes = await fetch(` https://nsoc-event.onrender.com/api/teams/${teamId}`);
         const teamData = await teamRes.json();
 
         if (!teamRes.ok) {

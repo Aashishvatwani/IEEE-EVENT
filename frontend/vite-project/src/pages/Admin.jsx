@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import './Admin.css'
 
-const API_BASE = 'http://localhost:5000/api'
+const API_BASE = 'https://nsoc-event.onrender.com/api'
 
 const Admin = () => {
     const [username, setUsername] = useState('')

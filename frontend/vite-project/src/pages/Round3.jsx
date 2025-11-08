@@ -84,7 +84,7 @@ const Round3 = () => {
         setLoading(true);
         
         // Fetch challenge link and team sector
-        const challengeRes = await fetch(`http://localhost:5000/api/round3/challenge/${teamId}`);
+        const challengeRes = await fetch(` https://nsoc-event.onrender.com/api/round3/challenge/${teamId}`);
         const challengeData = await challengeRes.json();
 
         if (!challengeRes.ok) {

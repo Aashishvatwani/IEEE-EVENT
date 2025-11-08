@@ -20,8 +20,17 @@ connectDB();
 // Initialize Express app
 const app = express();
 
+// CORS Configuration
+const corsOptions = {
+  origin: '*',
+  credentials: true,
+  optionsSuccessStatus: 200,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
+};
+
 // Middleware
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -32,6 +41,9 @@ if (process.env.NODE_ENV === 'development') {
     next();
   });
 }
+
+// Handle preflight requests
+app.options('*', cors(corsOptions));
 
 // Health check route
 app.get('/', (req, res) => {

@@ -75,7 +75,7 @@ export default function TeamRegistration() {
       }
 
       try {
-        const res = await fetch('http://localhost:5000/api/teams/register', {
+        const res = await fetch(' https://nsoc-event.onrender.com/api/teams/register', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
