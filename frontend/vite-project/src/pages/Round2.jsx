@@ -105,7 +105,7 @@ const Round2 = () => {
         setLoading(true);
 
         // Fetch team data to get purchased components from Round 1
-        const teamRes = await fetch(` https://nsoc-event.onrender.com/api/teams/${teamId}`);
+        const teamRes = await fetch(`${import.meta.env.VITE_API_BASE_URL}/teams/${teamId}`);
         const teamData = await teamRes.json();
 
         if (!teamRes.ok) {
@@ -147,7 +147,7 @@ const Round2 = () => {
         setRemainingBalance(balance);
 
         // Fetch all available components for additional purchase
-        const componentsRes = await fetch('http://localhost:5000/api/round1/components');
+        const componentsRes = await fetch(`${import.meta.env.VITE_API_BASE_URL}/round1/components`);
         const componentsData = await componentsRes.json();
         
         if (componentsRes.ok) {
@@ -354,7 +354,7 @@ const Round2 = () => {
       }));
 
       // Submit to backend
-      const res = await fetch('http://localhost:5000/api/round2/submit', {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/round2/submit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

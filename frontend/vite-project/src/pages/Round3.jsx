@@ -84,7 +84,7 @@ const Round3 = () => {
         setLoading(true);
         
         // Fetch challenge link and team sector
-        const challengeRes = await fetch(` https://nsoc-event.onrender.com/api/round3/challenge/${teamId}`);
+        const challengeRes = await fetch(`${import.meta.env.VITE_API_BASE_URL}/round3/challenge/${teamId}`);
         const challengeData = await challengeRes.json();
 
         if (!challengeRes.ok) {
@@ -96,7 +96,7 @@ const Round3 = () => {
         localStorage.setItem('sector', challengeData.data.sector);
 
         // Fetch existing Round 3 data if any
-        const round3Res = await fetch(`http://localhost:5000/api/round3/team/${teamId}`);
+        const round3Res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/round3/team/${teamId}`);
         const round3ResData = await round3Res.json();
 
         if (round3Res.ok && round3ResData.data.submitted) {
@@ -105,7 +105,7 @@ const Round3 = () => {
         }
 
         // Fetch team data for overall scores
-        const teamRes = await fetch(`http://localhost:5000/api/teams/${teamId}`);
+        const teamRes = await fetch(`${import.meta.env.VITE_API_BASE_URL}/teams/${teamId}`);
         const teamResData = await teamRes.json();
         
         if (teamRes.ok) {
@@ -225,7 +225,7 @@ const Round3 = () => {
 
     try {
       // Submit to backend
-      const res = await fetch('http://localhost:5000/api/round3/submit', {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/round3/submit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -259,7 +259,7 @@ const Round3 = () => {
       setIsSubmitted(true);
       
       // Refresh team data to get updated total score
-      const teamRes = await fetch(`http://localhost:5000/api/teams/${teamId}`);
+      const teamRes = await fetch(`${import.meta.env.VITE_API_BASE_URL}/teams/${teamId}`);
       const teamResData = await teamRes.json();
       if (teamRes.ok) {
         setTeamData(teamResData.data);

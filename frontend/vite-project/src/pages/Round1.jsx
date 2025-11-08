@@ -72,7 +72,7 @@ const Round1 = () => {
         setError(null);
 
         // Fetch quiz questions
-        const quizRes = await fetch(' https://nsoc-event.onrender.com/api/round1/quiz');
+        const quizRes = await fetch(`${import.meta.env.VITE_API_BASE_URL}/round1/quiz`);
         const quizData = await quizRes.json();
         
         if (!quizRes.ok) {
@@ -92,7 +92,7 @@ const Round1 = () => {
         setQuizQuestions(transformedQuestions);
 
         // Fetch components
-        const compRes = await fetch('http://localhost:5000/api/round1/components');
+        const compRes = await fetch(`${import.meta.env.VITE_API_BASE_URL}/round1/components`);
         const compData = await compRes.json();
         
         if (!compRes.ok) {
@@ -163,7 +163,7 @@ const Round1 = () => {
       const answerIndices = results.answers.map(a => a.selectedAnswer !== null ? a.selectedAnswer : -1);
 
       // Submit quiz to backend
-      const res = await fetch('http://localhost:5000/api/round1/quiz/submit', {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/round1/quiz/submit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -209,7 +209,7 @@ const Round1 = () => {
 
       console.log('Sending purchase request:', { teamId, componentIds });
 
-      const res = await fetch('http://localhost:5000/api/round1/purchase', {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/round1/purchase`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
