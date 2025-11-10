@@ -7,8 +7,9 @@ import Component from '../models/Component.js';
 // @access  Public
 export const getQuizQuestions = async (req, res) => {
   try {
-    // Include correctAnswer for client-side validation and feedback
+    // Fetch questions but exclude correctAnswer from response for security
     const questions = await QuizQuestion.find({ isActive: true })
+      .select('-correctAnswer')  // Exclude correctAnswer field
       .limit(12);
 
     res.status(200).json({
@@ -21,6 +22,52 @@ export const getQuizQuestions = async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message || 'Error fetching quiz questions'
+    });
+  }
+};
+
+// @desc    Validate a single quiz answer
+// @route   POST /api/round1/quiz/validate
+// @access  Public
+export const validateAnswer = async (req, res) => {
+  try {
+    const { questionIndex, selectedAnswer } = req.body;
+
+    if (questionIndex === undefined || selectedAnswer === null) {
+      return res.status(400).json({
+        success: false,
+        message: 'Question index and selected answer are required'
+      });
+    }
+
+    // Get all questions in the same order they were sent to frontend
+    const questions = await QuizQuestion.find({ isActive: true }).limit(12);
+    
+    if (questionIndex < 0 || questionIndex >= questions.length) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid question index'
+      });
+    }
+
+    const question = questions[questionIndex];
+    const correctAnswer = Number(question.correctAnswer);
+    const selected = Number(selectedAnswer);
+    const isCorrect = selected === correctAnswer;
+
+    res.status(200).json({
+      success: true,
+      data: {
+        isCorrect,
+        correctAnswer: isCorrect ? null : correctAnswer, // Only send correct answer if wrong
+        earnedAmount: isCorrect ? 100 : 0
+      }
+    });
+  } catch (error) {
+    console.error('Validate answer error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error validating answer'
     });
   }
 };

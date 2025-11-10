@@ -17,6 +17,8 @@ const QuizRunner = ({ questions, onComplete }) => {
     return saved ? JSON.parse(saved) : [];
   });
   const [isAnswered, setIsAnswered] = useState(false);
+  const [validationResult, setValidationResult] = useState(null);
+  const [isValidating, setIsValidating] = useState(false);
 
   // Save quiz progress to localStorage
   useEffect(() => {
@@ -52,65 +54,100 @@ const QuizRunner = ({ questions, onComplete }) => {
   const handleAnswerSelect = (index) => {
     if (!isAnswered) {
       setSelectedAnswer(index);
-      console.log('Selected answer:', index, 'Type:', typeof index);
-      console.log('Correct answer:', questions[currentQuestion].correctAnswer, 'Type:', typeof questions[currentQuestion].correctAnswer);
-      console.log('Are they equal?', index === questions[currentQuestion].correctAnswer);
-      console.log('Full question object:', questions[currentQuestion]);
     }
   };
 
   const handleNext = (autoSubmit = false) => {
-    const correctAnswerIndex = Number(questions[currentQuestion].correctAnswer);
-    const selectedAnswerIndex = Number(selectedAnswer);
-    const isCorrect = autoSubmit ? false : selectedAnswerIndex === correctAnswerIndex;
-    
-    console.log('Checking answer:', {
-      selectedAnswer: selectedAnswerIndex,
-      selectedAnswerType: typeof selectedAnswerIndex,
-      correctAnswerIndex,
-      correctAnswerType: typeof correctAnswerIndex,
-      isCorrect,
-      rawCorrectAnswer: questions[currentQuestion].correctAnswer,
-      question: questions[currentQuestion].question
-    });
-    
-    const newAnswers = [...answers, {
-      questionId: questions[currentQuestion].id,
-      selectedAnswer: autoSubmit ? null : selectedAnswerIndex,
-      correct: isCorrect,
-      timeTaken: 120 - timeLeft
-    }];
-    setAnswers(newAnswers);
-    localStorage.setItem('quizAnswers', JSON.stringify(newAnswers));
+    // For auto-submit (time out), save answer as incorrect
+    if (autoSubmit) {
+      const newAnswers = [...answers, {
+        questionId: questions[currentQuestion].id || questions[currentQuestion]._id,
+        selectedAnswer: null,
+        correct: false,
+        timeTaken: 120
+      }];
+      setAnswers(newAnswers);
+      localStorage.setItem('quizAnswers', JSON.stringify(newAnswers));
 
-    if (currentQuestion < questions.length - 1) {
-      setCurrentQuestion(currentQuestion + 1);
-      setSelectedAnswer(null);
-      setTimeLeft(120);
-      setIsAnswered(false);
-    } else {
-      // Quiz complete - clear progress from localStorage
-      clearQuizProgress();
-      
-      const correctCount = newAnswers.filter(a => a.correct).length;
-      const earnedAmount = correctCount * 100;
-      onComplete({
-        answers: newAnswers,
-        correctCount,
-        earnedAmount,
-        totalQuestions: questions.length
-      });
+      if (currentQuestion < questions.length - 1) {
+        setCurrentQuestion(currentQuestion + 1);
+        setSelectedAnswer(null);
+        setTimeLeft(120);
+        setIsAnswered(false);
+        setValidationResult(null);
+      } else {
+        // Quiz complete - clear progress from localStorage
+        clearQuizProgress();
+        
+        onComplete({
+          answers: newAnswers,
+          totalQuestions: questions.length
+        });
+      }
     }
   };
 
-  const handleSubmit = () => {
-    if (selectedAnswer !== null) {
-      setIsAnswered(true);
-      console.log('Answer submitted.');
-      console.log('Selected:', selectedAnswer, 'Correct:', questions[currentQuestion].correctAnswer);
-      console.log('Comparison:', selectedAnswer === questions[currentQuestion].correctAnswer);
-      console.log('Number Comparison:', Number(selectedAnswer) === Number(questions[currentQuestion].correctAnswer));
-      setTimeout(() => handleNext(), 2000); // Increased to 2 seconds to see the result
+  const handleSubmit = async () => {
+    if (selectedAnswer !== null && !isValidating) {
+      setIsValidating(true);
+      
+      try {
+        // Call backend to validate the answer using question index
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/round1/quiz/validate`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            questionIndex: currentQuestion,  // Send index instead of ID
+            selectedAnswer: selectedAnswer
+          })
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+          setValidationResult(data.data);
+          setIsAnswered(true);
+          
+          // Save answer with validation result
+          const newAnswers = [...answers, {
+            questionId: questions[currentQuestion].id || questions[currentQuestion]._id,
+            selectedAnswer: selectedAnswer,
+            correct: data.data.isCorrect,
+            timeTaken: 120 - timeLeft
+          }];
+          setAnswers(newAnswers);
+          localStorage.setItem('quizAnswers', JSON.stringify(newAnswers));
+          
+          // Move to next question after showing result
+          setTimeout(() => {
+            if (currentQuestion < questions.length - 1) {
+              setCurrentQuestion(currentQuestion + 1);
+              setSelectedAnswer(null);
+              setTimeLeft(120);
+              setIsAnswered(false);
+              setValidationResult(null);
+            } else {
+              // Quiz complete - clear progress from localStorage
+              clearQuizProgress();
+              
+              // Send completed quiz data
+              onComplete({
+                answers: newAnswers,
+                totalQuestions: questions.length
+              });
+            }
+          }, 2000);
+        } else {
+          alert('Failed to validate answer. Please try again.');
+        }
+      } catch (error) {
+        console.error('Validation error:', error);
+        alert('Network error. Please check your connection.');
+      } finally {
+        setIsValidating(false);
+      }
     }
   };
 
@@ -164,9 +201,9 @@ const QuizRunner = ({ questions, onComplete }) => {
 
           <div className="quiz-options">
             {questions[currentQuestion].options.map((option, index) => {
-              const correctAnswerNum = Number(questions[currentQuestion].correctAnswer);
-              const isCorrectOption = index === correctAnswerNum;
               const isSelectedOption = selectedAnswer === index;
+              const isCorrectOption = validationResult && validationResult.correctAnswer === index;
+              const isWrongOption = validationResult && !validationResult.isCorrect && isSelectedOption;
               
               return (
                 <motion.button
@@ -175,10 +212,12 @@ const QuizRunner = ({ questions, onComplete }) => {
                   className={`quiz-option ${
                     isSelectedOption ? 'selected' : ''
                   } ${
-                    isAnswered && isCorrectOption
+                    isAnswered && validationResult?.isCorrect && isSelectedOption
                       ? 'correct'
-                      : isAnswered && isSelectedOption && !isCorrectOption
+                      : isAnswered && isWrongOption
                       ? 'incorrect'
+                      : isAnswered && isCorrectOption
+                      ? 'correct'
                       : ''
                   }`}
                   whileHover={{ scale: isAnswered ? 1 : 1.02 }}
@@ -189,11 +228,14 @@ const QuizRunner = ({ questions, onComplete }) => {
                     {String.fromCharCode(65 + index)}
                   </span>
                   <span className="option-text">{option}</span>
-                  {isAnswered && isCorrectOption && (
+                  {isAnswered && validationResult?.isCorrect && isSelectedOption && (
                     <span className="option-icon">✓</span>
                   )}
-                  {isAnswered && isSelectedOption && !isCorrectOption && (
+                  {isAnswered && isWrongOption && (
                     <span className="option-icon">✗</span>
+                  )}
+                  {isAnswered && isCorrectOption && !validationResult?.isCorrect && (
+                    <span className="option-icon">✓</span>
                   )}
                 </motion.button>
               );
@@ -201,32 +243,34 @@ const QuizRunner = ({ questions, onComplete }) => {
           </div>
 
           <div className="quiz-actions">
-            {isAnswered && (
+            {isAnswered && validationResult && (
               <motion.div 
-                className={`answer-feedback ${Number(selectedAnswer) === Number(questions[currentQuestion].correctAnswer) ? 'feedback-correct' : 'feedback-incorrect'}`}
+                className={`answer-feedback ${validationResult.isCorrect ? 'feedback-correct' : 'feedback-incorrect'}`}
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
               >
-                {Number(selectedAnswer) === Number(questions[currentQuestion].correctAnswer) ? (
+                {validationResult.isCorrect ? (
                   <>
                     <span className="feedback-icon">🎉</span>
-                    <span className="feedback-text">Correct! +₹100</span>
+                    <span className="feedback-text">Correct! +₹{validationResult.earnedAmount}</span>
                   </>
                 ) : (
                   <>
                     <span className="feedback-icon">❌</span>
-                    <span className="feedback-text">Incorrect! Correct answer was {String.fromCharCode(65 + Number(questions[currentQuestion].correctAnswer))}</span>
+                    <span className="feedback-text">
+                      Incorrect! Correct answer was {String.fromCharCode(65 + validationResult.correctAnswer)}
+                    </span>
                   </>
                 )}
               </motion.div>
             )}
             <button
               onClick={handleSubmit}
-              disabled={selectedAnswer === null || isAnswered}
+              disabled={selectedAnswer === null || isAnswered || isValidating}
               className="quiz-submit-btn"
             >
-              {isAnswered ? 'Moving to next...' : 'Submit Answer'}
+              {isValidating ? 'Validating...' : isAnswered ? 'Moving to next...' : 'Submit Answer'}
             </button>
           </div>
         </motion.div>

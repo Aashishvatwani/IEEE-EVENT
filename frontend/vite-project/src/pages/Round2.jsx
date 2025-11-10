@@ -13,7 +13,10 @@ const Round2 = () => {
   });
   const [schematicSlots, setSchematicSlots] = useState(() => {
     const saved = localStorage.getItem('round2SchematicSlots');
-    return saved ? JSON.parse(saved) : [
+    if (saved) return JSON.parse(saved);
+    
+    // Default slots - will be updated with sector-specific labels
+    return [
       { id: 1, label: 'Input Layer', component: null, correctType: 'sensor' },
       { id: 2, label: 'Signal Processing', component: null, correctType: 'signal' },
       { id: 3, label: 'Control Unit', component: null, correctType: 'controller' },
@@ -40,10 +43,7 @@ const Round2 = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [teamData, setTeamData] = useState(null);
-  const [showHint, setShowHint] = useState(() => {
-    const saved = localStorage.getItem('round2ShowHint');
-    return saved === 'true';
-  });
+
   const [availableComponents, setAvailableComponents] = useState([]);
   const [remainingBalance, setRemainingBalance] = useState(() => {
     const saved = localStorage.getItem('round2RemainingBalance');
@@ -51,11 +51,29 @@ const Round2 = () => {
   });
   const [showComponentStore, setShowComponentStore] = useState(false);
   const [selectedComponentToBuy, setSelectedComponentToBuy] = useState(null);
+  const [sectorInfo, setSectorInfo] = useState(null);
 
   // Save additional state to localStorage
   useEffect(() => {
     localStorage.setItem('round2RemainingBalance', remainingBalance.toString());
   }, [remainingBalance]);
+
+  // Update slot labels and correct types based on sector info
+  useEffect(() => {
+    if (sectorInfo && sectorInfo.components && sector) {
+      // Use generic correct flow for all sectors
+      const correctFlow = ['sensor', 'signal', 'controller', 'communication', 'cloud', 'actuator'];
+
+      setSchematicSlots(prev => prev.map((slot, index) => {
+        const type = correctFlow[index];
+        return {
+          ...slot,
+          label: sectorInfo.components[type] || slot.label,
+          correctType: type
+        };
+      }));
+    }
+  }, [sectorInfo, sector]);
 
   // Save state to localStorage whenever it changes
   useEffect(() => {
@@ -81,10 +99,6 @@ const Round2 = () => {
       localStorage.setItem('round2Score', score.toString());
     }
   }, [score]);
-
-  useEffect(() => {
-    localStorage.setItem('round2ShowHint', showHint.toString());
-  }, [showHint]);
 
   // Fetch team data and purchased components from backend
   useEffect(() => {
@@ -114,6 +128,14 @@ const Round2 = () => {
 
         setTeamData(teamData.data);
         setSector(teamData.data.sector);
+
+        // Fetch sector information
+        const sectorRes = await fetch(`${import.meta.env.VITE_API_BASE_URL}/round2/sector-info/${teamId}`);
+        const sectorData = await sectorRes.json();
+        
+        if (sectorRes.ok) {
+          setSectorInfo(sectorData.data);
+        }
 
         // Check if Round 1 completed
         if (!teamData.data.round1.submitted) {
@@ -232,16 +254,12 @@ const Round2 = () => {
           handleAutoSubmit();
           return 0;
         }
-        // Show hint after 10 minutes (when 10 minutes remain)
-        if (prev === 10 * 60 && !showHint) {
-          setShowHint(true);
-        }
         return prev - 1;
       });
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeRemaining, isSubmitted, showHint]);
+  }, [timeRemaining, isSubmitted]);
 
   // Scroll to top handler
   useEffect(() => {
@@ -274,6 +292,14 @@ const Round2 = () => {
   const handleDrop = (slotId) => {
     if (!draggedComponent) return;
 
+    // Check if slot already has a component (locked)
+    const targetSlot = schematicSlots.find(slot => slot.id === slotId);
+    if (targetSlot && targetSlot.component) {
+      alert('This slot is already filled and cannot be changed!');
+      setDraggedComponent(null);
+      return;
+    }
+
     setSchematicSlots(prev =>
       prev.map(slot =>
         slot.id === slotId
@@ -284,14 +310,11 @@ const Round2 = () => {
     setDraggedComponent(null);
   };
 
+  // Remove component function disabled - components are locked once placed
   const handleRemoveComponent = (slotId) => {
-    setSchematicSlots(prev =>
-      prev.map(slot =>
-        slot.id === slotId
-          ? { ...slot, component: null }
-          : slot
-      )
-    );
+    // Components cannot be removed once placed
+    alert('Components cannot be removed once placed. Choose carefully!');
+    return;
   };
 
   const calculateScore = () => {
@@ -521,6 +544,9 @@ const Round2 = () => {
 
   return (
     <div className="round2-container">
+      {/* Sector Theme Popup */}
+
+
       <div className="round2-header">
         <motion.div 
           className="round2-title"
@@ -559,7 +585,7 @@ const Round2 = () => {
             <h3>📋 Instructions</h3>
             <ul>
               <li>Drag and drop your purchased components into the schematic slots</li>
-              <li>Build the correct IoT data flow from input to output</li>
+              <li>Build the correct IoT data flow from input to output for your sector: <strong>{sector}</strong></li>
               <li>Each correct placement earns <strong>15 points</strong> (max 90 points)</li>
               <li>Time bonus: Up to <strong>10 points</strong> (requires at least 1 correct component)</li>
               <li><strong>You can submit with partial completion!</strong> Empty slots won't earn points.</li>
@@ -567,6 +593,24 @@ const Round2 = () => {
               <li>Complete within 20 minutes</li>
             </ul>
             
+            {sectorInfo && (
+              <button 
+                className="view-mission-btn"
+                onClick={() => setShowSectorPopup(true)}
+                style={{
+                  marginTop: '1rem',
+                  padding: '0.5rem 1rem',
+                  background: 'rgba(0, 230, 255, 0.1)',
+                  border: '1px solid var(--glow-blue)',
+                  borderRadius: '8px',
+                  color: 'var(--glow-blue)',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                {sectorInfo.icon} View Mission Details
+              </button>
+            )}
           </motion.div>
 
           {/* Component Palette */}
@@ -667,38 +711,8 @@ const Round2 = () => {
           >
             <h3>🔧 IoT System Schematic</h3>
 
-            {/* Hint - Appears after 10 minutes */}
-            {showHint && (
-              <motion.div 
-                className="schematic-hint"
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-              >
-                <div className="hint-header">
-                  <span className="hint-icon">💡</span>
-                  <span className="hint-title">Component Flow Hint</span>
-                </div>
-                <div className="hint-content">
-                  <div className="hint-flow">
-                    <span className="hint-step">Sensor</span>
-                    <span className="hint-arrow">→</span>
-                    <span className="hint-step">Signal</span>
-                    <span className="hint-arrow">→</span>
-                    <span className="hint-step">Controller</span>
-                    <span className="hint-arrow">→</span>
-                    <span className="hint-step">Communication</span>
-                    <span className="hint-arrow">→</span>
-                    <span className="hint-step">Cloud</span>
-                    <span className="hint-arrow">→</span>
-                    <span className="hint-step">Actuator</span>
-                  </div>
-                  <p className="hint-note">
-                    💡 Arrange your components in the correct order to proceed!
-                  </p>
-                </div>
-              </motion.div>
-            )}
+            {/* Sector-Specific Flow Guide */}
+     
 
             <div className="schematic-flow">
               {schematicSlots.map((slot, index) => {
@@ -714,7 +728,7 @@ const Round2 = () => {
                       onDrop={() => handleDrop(slot.id)}
                       whileHover={{ scale: slot.component ? 1 : 1.02 }}
                     >
-                      <div className="slot-label">{slot.label}</div>
+                      <div className="slot-label">Add Component</div>
                       {slot.component ? (
                         <div className={`placed-component ${slot.component.type}`}>
                           <div className="component-icon">{slot.component.icon}</div>

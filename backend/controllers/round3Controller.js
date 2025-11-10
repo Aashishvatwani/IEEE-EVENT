@@ -2,9 +2,9 @@ import Team from '../models/Team.js';
 
 // Unstop challenge links for each sector
 const UNSTOP_LINKS = {
-  'Lumina District': 'https://unstop.com/your-lumina-challenge',
-  'HydroCore': 'https://unstop.com/your-hydrocore-challenge',
-  'AeroHab': 'https://unstop.com/your-aerohab-challenge'
+  'Lumina District': 'https://unstop.com/p/to-debug-the-iot-system-and-save-neurovia-national-institute-of-engineering-nie-mysuru-1592775',
+  'HydroCore': 'https://unstop.com/o/KREo3bx?lb=eK9uwefu&utm_medium=Share&utm_source=shreypv29338&utm_campaign=Online_coding_challenge',
+ 
 };
 
 // @desc    Get Unstop challenge link for team's sector
@@ -36,7 +36,7 @@ export const getChallengeLink = async (req, res) => {
       data: {
         sector: team.sector,
         unstopLink,
-        timeLimit: 25 // minutes
+        timeLimit: 30 // minutes
       }
     });
   } catch (error) {
@@ -86,7 +86,7 @@ export const submitRound3 = async (req, res) => {
       });
     }
 
-    if (timeTaken < 0 || timeTaken > 25) {
+    if (timeTaken < 0 || timeTaken > 30) {
       return res.status(400).json({
         success: false,
         message: 'Time taken must be between 0 and 25 minutes'
@@ -95,12 +95,12 @@ export const submitRound3 = async (req, res) => {
 
     // Calculate score
     // Formula: testCasesPassed + (25 - timeTaken)
-    const timeBonus = Math.max(0, 25 - timeTaken);
+    const timeBonus = Math.max(0, 30 - timeTaken);
     const finalScore = testCasesPassed + timeBonus;
 
     // Update team Round 3 data
     team.round3.unstopLink = UNSTOP_LINKS[team.sector];
-    team.round3.testCasesPassed = testCasesPassed;
+    team.round3.testCasesPassed = 100*testCasesPassed;
     team.round3.timeTaken = timeTaken;
     team.round3.finalScore = finalScore;
     team.round3.submitted = true;

@@ -26,6 +26,9 @@ const Round1 = () => {
     return saved ? parseInt(saved) : 1200;
   });
   const [countdown, setCountdown] = useState(5);
+  const [sectorInfo, setSectorInfo] = useState(null);
+  const [showSectorPopup, setShowSectorPopup] = useState(false);
+  const [sector, setSector] = useState(localStorage.getItem('sector') || null);
 
   // Save phase to localStorage whenever it changes
   useEffect(() => {
@@ -113,6 +116,7 @@ const Round1 = () => {
         }));
 
         setComponentStore(transformedComponents);
+
         setLoading(false);
       } catch (err) {
         console.error('Error fetching data:', err);
@@ -190,7 +194,27 @@ const Round1 = () => {
       });
 
       setBonusAmount(data.data.bonusAmount);
-      setTimeout(() => setPhase('store'), 2000);
+      
+      // Fetch sector information
+      const sectorRes = await fetch(`${import.meta.env.VITE_API_BASE_URL}/round2/sector-info/${teamId}`);
+      const sectorData = await sectorRes.json();
+      
+      if (sectorRes.ok) {
+        setSectorInfo(sectorData.data);
+        setSector(sectorData.data.sector);
+        localStorage.setItem('sector', sectorData.data.sector);
+        
+        // Show sector popup after quiz completion (only if not shown before)
+        const sectorPopupShown = localStorage.getItem('round1SectorPopupShown');
+        if (!sectorPopupShown) {
+          setTimeout(() => setShowSectorPopup(true), 2000);
+        } else {
+          setTimeout(() => setPhase('store'), 2000);
+        }
+      } else {
+        // If sector fetch fails, still proceed to store
+        setTimeout(() => setPhase('store'), 2000);
+      }
     } catch (err) {
       console.error('Error submitting quiz:', err);
       alert('Failed to submit quiz: ' + err.message);
@@ -304,6 +328,66 @@ const Round1 = () => {
 
   return (
     <div className="round1-page">
+      {/* Sector Theme Popup */}
+      {showSectorPopup && sectorInfo && (
+        <motion.div 
+          className="sector-popup-overlay"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          onClick={(e) => {
+            if (e.target.className.includes('overlay')) {
+              setShowSectorPopup(false);
+              localStorage.setItem('round1SectorPopupShown', 'true');
+              setPhase('store');
+            }
+          }}
+        >
+          <motion.div 
+            className="sector-popup-content"
+            initial={{ scale: 0.8, y: -50 }}
+            animate={{ scale: 1, y: 0 }}
+            transition={{ type: "spring", duration: 0.5 }}
+          >
+            <div className="sector-popup-header">
+              <span className="sector-icon-large">{sectorInfo.icon}</span>
+              <h2>{sectorInfo.title}</h2>
+              <p className="sector-name">{sectorInfo.sector}</p>
+            </div>
+            
+            <div className="sector-popup-body">
+              <div className="sector-detail-box failure">
+                <h3>⚠️ System Failure</h3>
+                <p>{sectorInfo.failure}</p>
+              </div>
+              
+              <div className="sector-detail-box flaw">
+                <h3>🌌 Universe Constraint</h3>
+                <p>{sectorInfo.universeFlaw}</p>
+              </div>
+
+              <div className="mission-brief">
+                <h3>🎯 Your Mission</h3>
+                <p>Build the correct IoT schematic to restore the {sectorInfo.title} and adapt to the universe's constraints!</p>
+                <p style={{ marginTop: '1rem', fontSize: '0.9rem', color: 'rgba(255, 255, 255, 0.7)' }}>
+                  Now it's time to purchase components wisely. You'll need them to build the complete data flow in Round 2!
+                </p>
+              </div>
+            </div>
+
+            <button 
+              className="sector-popup-close"
+              onClick={() => {
+                setShowSectorPopup(false);
+                localStorage.setItem('round1SectorPopupShown', 'true');
+                setPhase('store');
+              }}
+            >
+              Proceed to Component Store →
+            </button>
+          </motion.div>
+        </motion.div>
+      )}
+
       {/* Background */}
       <div className="round1-bg"></div>
 
@@ -348,7 +432,7 @@ const Round1 = () => {
                 <span className="briefing-icon">🛒</span>
                 <div>
                   <h3>Purchase Components</h3>
-                  <p>Buy exactly 6 components from the store using your funds</p>
+                  <p>Buy exactly 6 components from the store using your funds</p>g
                 </div>
               </div>
 

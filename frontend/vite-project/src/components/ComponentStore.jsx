@@ -148,33 +148,33 @@ const ComponentStore = ({ components, initialBalance, onPurchaseComplete }) => {
             <motion.div
               key={component.id}
               className={`component-card ${isPurchased ? 'purchased' : ''} ${isInCart ? 'in-cart' : ''} ${!canAfford && !isInCart && !isPurchased ? 'unaffordable' : ''}`}
-              whileHover={{ y: isPurchased ? 0 : -4 }}
+              whileHover={{ y: isPurchased ? 0 : -4, scale: isPurchased ? 1 : 1.02 }}
               layout
             >
-              <div className="component-icon">{component.icon}</div>
-              <h3 className="component-name">{component.name}</h3>
+              <div className="component-header-section">
+                <div className="component-icon">{component.icon}</div>
+                <div className="component-info">
+                  <h3 className="component-name">{component.name}</h3>
+                  <div className="component-price-tag">₹{component.price}</div>
+                </div>
+              </div>
+              
               <p className="component-description">{component.description}</p>
               
-              <div className="component-tags">
-                {component.tags.map((tag, index) => (
-                  <span key={index} className={`tag ${tag}`}>
-                    {tag}
-                  </span>
-                ))}
-              </div>
+           
 
-              <div className="component-footer">
-                <div className="component-price">₹{component.price}</div>
+              <div className="component-actions">
                 {isPurchased ? (
                   <button className="component-btn purchased-btn" disabled>
-                    ✓ Purchased
+                    <span className="btn-icon">✓</span>
+                    <span className="btn-text">Purchased</span>
                   </button>
                 ) : isInCart ? (
                   <button
                     className="component-btn remove-btn"
                     onClick={() => removeFromCart(component.code)}
                   >
-                    Remove
+                    <span className="btn-icon">✕</span>
                   </button>
                 ) : (
                   <button
@@ -182,14 +182,11 @@ const ComponentStore = ({ components, initialBalance, onPurchaseComplete }) => {
                     onClick={() => addToCart(component)}
                     disabled={!canAfford || totalPurchased + cart.length >= 6}
                   >
-                    Add to Cart
+                    <span className="btn-icon">+</span>
+                    <span className="btn-text">Add</span>
                   </button>
                 )}
               </div>
-
-              {component.essential && (
-                <div className="essential-badge">Essential</div>
-              )}
             </motion.div>
           );
         })}

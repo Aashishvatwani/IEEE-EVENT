@@ -533,3 +533,121 @@
     padding: 1rem;
   }
 }
+
+/* Add Member Button */
+.add-member-btn {
+  width: 100%;
+  padding: 1rem 1.5rem;
+  background: linear-gradient(135deg, 
+    rgba(0, 230, 255, 0.1), 
+    rgba(123, 97, 255, 0.1)
+  );
+  border: 2px dashed rgba(0, 230, 255, 0.4);
+  border-radius: 10px;
+  color: var(--color-primary);
+  font-family: var(--font-sub);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  transition: all 0.3s ease;
+  margin-bottom: 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.add-member-btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(0, 230, 255, 0.1);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.add-member-btn:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+.add-member-btn:hover {
+  border-color: var(--color-primary);
+  border-style: solid;
+  box-shadow: 
+    0 0 20px rgba(0, 230, 255, 0.3),
+    0 0 40px rgba(0, 230, 255, 0.1) inset;
+  transform: translateY(-2px);
+}
+
+.add-member-btn:active {
+  transform: translateY(0);
+}
+
+.add-member-icon {
+  font-size: 1.2rem;
+  position: relative;
+  z-index: 1;
+  transition: transform 0.3s ease;
+}
+
+.add-member-btn:hover .add-member-icon {
+  transform: rotate(90deg);
+}
+
+.add-member-text {
+  position: relative;
+  z-index: 1;
+  letter-spacing: 0.5px;
+}
+
+/* Remove Member Button */
+.remove-member-btn {
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, 
+    rgba(255, 0, 122, 0.1), 
+    rgba(255, 68, 68, 0.1)
+  );
+  border: 1px solid rgba(255, 0, 122, 0.3);
+  border-radius: 6px;
+  color: var(--color-accent);
+  font-family: var(--font-sub);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.3s ease;
+  margin-left: auto;
+}
+
+.remove-member-btn:hover {
+  background: linear-gradient(135deg, 
+    rgba(255, 0, 122, 0.2), 
+    rgba(255, 68, 68, 0.2)
+  );
+  border-color: var(--color-accent);
+  box-shadow: 0 0 15px rgba(255, 0, 122, 0.3);
+  transform: translateX(-2px);
+}
+
+.remove-member-btn:active {
+  transform: translateX(0);
+}
+
+.remove-icon {
+  font-size: 1.1rem;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.remove-text {
+  letter-spacing: 0.5px;
+}

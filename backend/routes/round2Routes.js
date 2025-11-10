@@ -2,7 +2,8 @@ import express from 'express';
 import {
   submitSchematic,
   getRound2Data,
-  getCorrectFlow
+  getCorrectFlow,
+  getSectorInfo
 } from '../controllers/round2Controller.js';
 
 const router = express.Router();
@@ -11,5 +12,6 @@ const router = express.Router();
 router.post('/submit', submitSchematic);
 router.get('/team/:teamId', getRound2Data);
 router.get('/correct-flow', getCorrectFlow);
+router.get('/sector-info/:teamId', getSectorInfo);
 
 export default router;

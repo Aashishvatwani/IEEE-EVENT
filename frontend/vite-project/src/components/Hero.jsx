@@ -145,20 +145,7 @@ const Hero = ({ onEnterSimulation, onRegister }) => {
         </motion.div>
 
         {/* Event Quick Info */}
-        <motion.div className="hero-info" variants={itemVariants}>
-          <div className="info-badge">
-            <span className="info-label">DATE</span>
-            <span className="info-value">10 NOV 2025</span>
-          </div>
-          <div className="info-badge">
-            <span className="info-label">TIME</span>
-            <span className="info-value">5:30 PM</span>
-          </div>
-          <div className="info-badge">
-            <span className="info-label">VENUE</span>
-            <span className="info-value">SIR MV HALL</span>
-          </div>
-        </motion.div>
+     
       </motion.div>
     </motion.section>
   );

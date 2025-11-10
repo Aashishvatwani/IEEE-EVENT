@@ -208,15 +208,18 @@ const Round3 = () => {
 
   const handleSubmit = async () => {
     if (!manualTime || testCasesPassed === 0) {
-      alert('Please enter the time taken and number of test cases passed!');
+      alert('Please enter the time left and number of test cases passed!');
       return;
     }
 
-    const timeTaken = parseInt(manualTime);
-    if (timeTaken > 25 || timeTaken < 0) {
-      alert('Please enter a valid time between 0 and 25 minutes!');
+    const timeLeft = parseInt(manualTime);
+    if (timeLeft > 30 || timeLeft < 0) {
+      alert('Please enter a valid time between 0 and 30 minutes!');
       return;
     }
+
+    // Calculate time taken from time left
+    const timeTaken = 25 - timeLeft;
 
     if (!teamId) {
       alert('Team ID not found. Please register first.');
@@ -404,7 +407,7 @@ const Round3 = () => {
                 </div>
                 <div className="formula-item">
                   <span className="formula-label">Time Bonus:</span>
-                  <span className="formula-value">25 - minutes taken</span>
+                  <span className="formula-value">30 - minutes taken</span>
                 </div>
                 <div className="formula-total">
                   <span>Total Score = Test Cases + Time Bonus</span>
@@ -466,14 +469,14 @@ const Round3 = () => {
             </div>
 
             <div className="input-group">
-              <label>Time Taken (in minutes):</label>
+              <label>Time Left (in minutes):</label>
               <input 
                 type="number" 
                 min="0" 
                 max="25"
                 value={manualTime}
                 onChange={(e) => setManualTime(e.target.value)}
-                placeholder="Enter time (0-25 min)"
+                placeholder="Enter time left (0-30 min)"
               />
             </div>
 
@@ -485,15 +488,19 @@ const Round3 = () => {
                     <span className="preview-value">{testCasesPassed}</span>
                   </div>
                   <div className="preview-item">
+                    <span>Time Left:</span>
+                    <span className="preview-value">{manualTime} min</span>
+                  </div>
+                  <div className="preview-item">
                     <span>Time Bonus:</span>
                     <span className="preview-value">
-                      {Math.max(0, 25 - parseInt(manualTime || 0))}
+                      {Math.max(0, 30 - (30 - parseInt(manualTime || 0)))}
                     </span>
                   </div>
                   <div className="preview-total">
                     <span>Estimated Total:</span>
                     <span className="preview-value">
-                      {testCasesPassed + Math.max(0, 25 - parseInt(manualTime || 0))}
+                      {testCasesPassed + Math.max(0, 30 - (30 - parseInt(manualTime || 0)))}
                     </span>
                   </div>
                 </>

@@ -7,10 +7,8 @@ export default function TeamRegistration() {
   const navigate = useNavigate()
   const [formData, setFormData] = useState({
     teamName: '',
+    // Start with one member; users can add as many as they want
     members: [
-      { name: '', email: '' },
-      { name: '', email: '' },
-      { name: '', email: '' },
       { name: '', email: '' }
     ]
   })
@@ -42,21 +40,32 @@ export default function TeamRegistration() {
       newErrors.teamName = 'Team name is required'
     }
 
-    // At least 3 members required
+    // At least 1 member required (min 1), no hard maximum
     const filledMembers = formData.members.filter(m => m.name.trim() && m.email.trim())
-    if (filledMembers.length < 3) {
-      newErrors.members = 'At least 3 team members required'
-    }
-    
-    if (filledMembers.length > 4) {
-      newErrors.members = 'Maximum 4 team members allowed'
+    if (filledMembers.length < 1) {
+      newErrors.members = 'At least 1 team member required'
     }
 
-    // Validate emails
+    // Validate member names and emails
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    const nameRegex = /^[a-zA-Z\s]+$/  // Only letters and spaces, no numbers
+    
     formData.members.forEach((member, idx) => {
-      if (member.name.trim() && !emailRegex.test(member.email)) {
-        newErrors[`email${idx}`] = 'Invalid email format'
+      // If the member has any data, validate both name and email
+      if (member.name.trim() || member.email.trim()) {
+        // Validate name: must be at least 3 characters and contain only letters
+        if (member.name.trim()) {
+          if (member.name.trim().length < 3) {
+            newErrors[`name${idx}`] = 'Name must be at least 3 characters'
+          } else if (!nameRegex.test(member.name.trim())) {
+            newErrors[`name${idx}`] = 'Name can only contain letters and spaces'
+          }
+        }
+        
+        // Validate email format
+        if (!emailRegex.test(member.email)) {
+          newErrors[`email${idx}`] = 'Invalid email format'
+        }
       }
     })
 
@@ -120,6 +129,22 @@ export default function TeamRegistration() {
         setErrors(prev => ({ ...prev, submit: 'Network error. Please check your connection.' }))
       }
     }
+  }
+
+  const addMember = () => {
+    setFormData(prev => ({
+      ...prev,
+      members: [...prev.members, { name: '', email: '' }]
+    }))
+  }
+
+  const removeMember = (index) => {
+    setFormData(prev => {
+      if (prev.members.length <= 1) return prev // keep at least one
+      const updated = [...prev.members]
+      updated.splice(index, 1)
+      return { ...prev, members: updated }
+    })
   }
 
   const calculateEntryFee = () => {
@@ -220,10 +245,21 @@ export default function TeamRegistration() {
           <div className="form-section">
             <h2 className="section-title">
               <span className="section-icon">👥</span>
-              Team Members (3-4 required)
+              Team Members (min 1 — add more as needed)
             </h2>
             {errors.members && <span className="error-text">{errors.members}</span>}
-            
+
+            <motion.button 
+              type="button" 
+              className="add-member-btn" 
+              onClick={addMember}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <span className="add-member-icon">➕</span>
+              <span className="add-member-text">Add Team Member</span>
+            </motion.button>
+
             {formData.members.map((member, index) => (
               <motion.div 
                 key={index}
@@ -234,24 +270,36 @@ export default function TeamRegistration() {
               >
                 <div className="member-header">
                   <span className="member-number">Member #{index + 1}</span>
-                  {index >= 3 && <span className="optional-tag">Optional</span>}
+                  {formData.members.length > 1 && (
+                    <motion.button
+                      type="button"
+                      className="remove-member-btn"
+                      onClick={() => removeMember(index)}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <span className="remove-icon">✕</span>
+                      <span className="remove-text">Remove</span>
+                    </motion.button>
+                  )}
                 </div>
                 
                 <div className="member-fields">
                   <div className="form-group">
-                    <label htmlFor={`member-name-${index}`}>Full Name {index < 3 && '*'}</label>
+                    <label htmlFor={`member-name-${index}`}>Full Name {index === 0 && '*'}</label>
                     <input
                       type="text"
                       id={`member-name-${index}`}
                       value={member.name}
                       onChange={(e) => handleMemberChange(index, 'name', e.target.value)}
                       placeholder="Enter full name"
-                      required={index < 3}
+                      className={errors[`name${index}`] ? 'error' : ''}
                     />
+                    {errors[`name${index}`] && <span className="error-text">{errors[`name${index}`]}</span>}
                   </div>
 
                   <div className="form-group">
-                    <label htmlFor={`member-email-${index}`}>Email {index < 3 && '*'}</label>
+                    <label htmlFor={`member-email-${index}`}>Email {index === 0 && '*'}</label>
                     <input
                       type="email"
                       id={`member-email-${index}`}
@@ -259,7 +307,6 @@ export default function TeamRegistration() {
                       onChange={(e) => handleMemberChange(index, 'email', e.target.value)}
                       placeholder="email@example.com"
                       className={errors[`email${index}`] ? 'error' : ''}
-                      required={index < 3}
                     />
                     {errors[`email${index}`] && <span className="error-text">{errors[`email${index}`]}</span>}
                   </div>
@@ -284,9 +331,8 @@ export default function TeamRegistration() {
             className="submit-button"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={onsubmit}
+            onClick={handleSubmit}
           >
-            <span className="button-glow"></span>
             <span className="button-text">⚡ Initialize Team & Join Mission</span>
           </motion.button>
         </motion.form>

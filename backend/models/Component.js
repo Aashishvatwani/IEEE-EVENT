@@ -9,7 +9,7 @@ const componentSchema = new mongoose.Schema({
   type: {
     type: String,
     required: [true, 'Component type is required'],
-    enum: ['sensor', 'signal', 'controller', 'communication', 'cloud', 'actuator', 'other']
+    enum: ['light-sensor', 'pressure-sensor', 'signal', 'controller', 'communication', 'cloud', 'led-actuator', 'pump-actuator', 'other']
   },
   icon: {
     type: String,

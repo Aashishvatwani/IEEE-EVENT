@@ -1,6 +1,7 @@
 import express from 'express';
 import {
   getQuizQuestions,
+  validateAnswer,
   submitQuiz,
   getComponents,
   purchaseComponents,
@@ -11,6 +12,7 @@ const router = express.Router();
 
 // Public routes
 router.get('/quiz', getQuizQuestions);
+router.post('/quiz/validate', validateAnswer);
 router.post('/quiz/submit', submitQuiz);
 router.get('/components', getComponents);
 router.post('/purchase', purchaseComponents);

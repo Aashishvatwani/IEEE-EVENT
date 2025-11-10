@@ -30,14 +30,14 @@ const teamSchema = new mongoose.Schema({
     type: [memberSchema],
     validate: {
       validator: function(members) {
-        return members.length >= 3 && members.length <= 4;
+        return members.length >= 1 ;
       },
-      message: 'Team must have 3-4 members'
+      message: 'Team must have at least 1 member'
     }
   },
   sector: {
     type: String,
-    enum: ['Lumina District', 'HydroCore', 'AeroHab'],
+    enum: ['Lumina District', 'HydroCore'],
     required: true
   },
 
@@ -80,7 +80,7 @@ const teamSchema = new mongoose.Schema({
   // Round 3 Data
   round3: {
     unstopLink: { type: String },
-    testCasesPassed: { type: Number, default: 0, min: 0, max: 10 },
+    testCasesPassed: { type: Number, default: 0, min: 0, max: 100 },
     timeTaken: { type: Number, default: 0, min: 0, max: 25 }, // in minutes
     submitted: { type: Boolean, default: false },
     submittedAt: Date,

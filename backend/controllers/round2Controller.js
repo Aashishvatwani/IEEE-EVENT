@@ -1,7 +1,79 @@
 import Team from '../models/Team.js';
 
-// Correct schematic flow
+// Generic correct schematic flow (same for all sectors)
 const CORRECT_FLOW = ['sensor', 'signal', 'controller', 'communication', 'cloud', 'actuator'];
+
+// Sector descriptions
+const SECTOR_INFO = {
+  'Lumina District': {
+    title: 'Smart Street Lighting System',
+    failure: 'The light-sensing system misreads day as night, causing power surges.',
+    universeFlaw: "The planet's day-night cycle changes every 4 hours — sensors must adapt dynamically.",
+    icon: '💡',
+    components: {
+      sensor: 'Light Sensor',
+      signal: 'Signal Conditioning',
+      controller: 'Controller',
+      communication: 'Communication Interface',
+      cloud: 'Cloud/Local Log',
+      actuator: 'LED Streetlight / Relay Driver'
+    }
+  },
+  'HydroCore': {
+    title: 'Smart Water Distribution',
+    failure: 'Reservoir valves malfunction due to corrupted pressure data, leading to shortages.',
+    universeFlaw: 'Gravity fluctuates — water flows unpredictably upward or sideways.',
+    icon: '💧',
+    components: {
+      sensor: 'Pressure Sensor',
+      signal: 'Signal Conditioning',
+      controller: 'Controller',
+      communication: 'Communication Interface',
+      cloud: 'Cloud/Local Log',
+      actuator: 'Pump/Valve Driver'
+    }
+  }
+};
+
+// @desc    Get sector information for a team
+// @route   GET /api/round2/sector-info/:teamId
+// @access  Public
+export const getSectorInfo = async (req, res) => {
+  try {
+    const team = await Team.findById(req.params.teamId);
+
+    if (!team) {
+      return res.status(404).json({
+        success: false,
+        message: 'Team not found'
+      });
+    }
+
+    const sector = team.sector;
+    const sectorData = SECTOR_INFO[sector];
+
+    if (!sectorData) {
+      return res.status(404).json({
+        success: false,
+        message: 'Sector information not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        sector,
+        ...sectorData
+      }
+    });
+  } catch (error) {
+    console.error('Get sector info error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error fetching sector information'
+    });
+  }
+};
 
 // @desc    Submit Round 2 schematic
 // @route   POST /api/round2/submit
@@ -45,16 +117,29 @@ export const submitSchematic = async (req, res) => {
     let correctPlacements = 0;
     let filledSlots = 0;
     
+    console.log('=== ROUND 2 SUBMISSION DEBUG ===');
+    console.log('Team Sector:', team.sector);
+    console.log('Correct Flow:', CORRECT_FLOW);
+    console.log('Submitted Schematic:');
+    
     schematic.forEach((slot, index) => {
       // Count filled slots (non-null components)
       if (slot && slot.componentType) {
         filledSlots++;
+        const isCorrect = slot.componentType === CORRECT_FLOW[index];
+        console.log(`Slot ${index + 1}: ${slot.componentType} | Expected: ${CORRECT_FLOW[index]} | Match: ${isCorrect}`);
         // Check if component is in correct position
-        if (slot.componentType === CORRECT_FLOW[index]) {
+        if (isCorrect) {
           correctPlacements++;
         }
+      } else {
+        console.log(`Slot ${index + 1}: EMPTY | Expected: ${CORRECT_FLOW[index]}`);
       }
     });
+    
+    console.log('Total Correct Placements:', correctPlacements);
+    console.log('Total Filled Slots:', filledSlots);
+    console.log('=================================');
 
     // Calculate score based on placements and time
     // Award points for each correct placement (even if not all slots filled)
@@ -104,7 +189,8 @@ export const submitSchematic = async (req, res) => {
         placementScore,
         finalScore,
         isAllCorrect,
-        canProceed: true // Always allow proceeding to Round 3
+        canProceed: true, // Always allow proceeding to Round 3
+        sector: team.sector
       }
     });
   } catch (error) {

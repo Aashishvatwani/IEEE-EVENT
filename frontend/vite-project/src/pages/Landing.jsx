@@ -28,6 +28,11 @@ const Landing = () => {
 
   return (
     <div className="landing-page">
+      {/* Logo in top left corner */}
+      <div className="landing-logo">
+        <img src="/nisb.jpg" alt="NISB Logo" className="logo-image" />
+      </div>
+
       {/* Animated Circuit Background */}
       <CircuitCanvas />
 
@@ -38,7 +43,7 @@ const Landing = () => {
       <PhaseCards />
 
       {/* Footer */}
-      <Footer />
+  
     </div>
   );
 };

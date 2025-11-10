@@ -8,11 +8,28 @@ export const registerTeam = async (req, res) => {
     const { teamName, members } = req.body;
 
     // Validation
-    if (!teamName || !members || members.length < 3 || members.length > 4) {
+    if (!teamName || !members || members.length < 1) {
       return res.status(400).json({
         success: false,
-        message: 'Team must have a name and 3-4 members'
+        message: 'Team must have a name and at least 1 member'
       });
+    }
+
+    // Validate member names
+    const nameRegex = /^[a-zA-Z\s]+$/;  // Only letters and spaces
+    for (const member of members) {
+      if (!member.name || member.name.trim().length < 3) {
+        return res.status(400).json({
+          success: false,
+          message: 'Each member name must be at least 3 characters long'
+        });
+      }
+      if (!nameRegex.test(member.name.trim())) {
+        return res.status(400).json({
+          success: false,
+          message: 'Member names can only contain letters and spaces (no numbers)'
+        });
+      }
     }
 
     // Check if team name already exists
@@ -30,7 +47,7 @@ export const registerTeam = async (req, res) => {
     
 
     // Assign sector randomly
-    const sectors = ['Lumina District', 'HydroCore', 'AeroHab'];
+    const sectors = ['Lumina District', 'HydroCore'];
     const sector = sectors[Math.floor(Math.random() * sectors.length)];
 
     // Create team
